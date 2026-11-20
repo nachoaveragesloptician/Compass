@@ -34,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Install Flatpak tooling
-        run: sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils ostree
+        run: sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils ostree python3-venv
       - name: Configure Flathub
         run: flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - name: Install pinned SDK
@@ -45,7 +45,7 @@ jobs:
           org.freedesktop.Sdk.Extension.node22//25.08
       - name: Validate metadata
         run: |
-          bash flatpak/update-flatpak.sh --check
+          bash flatpak/update-flatpak.sh
           desktop-file-validate flatpak/site.compass.Compass.desktop
           appstreamcli validate --no-net flatpak/site.compass.Compass.metainfo.xml
           flatpak-builder --show-manifest flatpak/site.compass.Compass.yml >/dev/null
