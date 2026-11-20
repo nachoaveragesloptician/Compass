@@ -84,7 +84,7 @@ modules:
     buildsystem: simple
     build-commands:
       - chmod +x flatpak-node/pnpm-cli/pnpm && ./flatpak-node/pnpm-cli/pnpm install --offline --frozen-lockfile --trust-lockfile
-      - PATH="$PWD/flatpak-node/pnpm-cli:$PWD/node_modules/.bin:$PATH" node node_modules/@tauri-apps/cli/tauri.js build --config '{"bundle":{"externalBin":[],"resources":[]}}' --no-bundle
+      - PATH="$PWD/flatpak-node/pnpm-cli:$PWD/node_modules/.bin:$PATH" node node_modules/@tauri-apps/cli/tauri.js build --config '{"build":{"beforeBuildCommand":"tsc -b && vite build"},"bundle":{"externalBin":[],"resources":[]}}' --no-bundle
       - install -Dm755 src-tauri/target/release/compass /app/bin/compass
       - install -Dm644 flatpak/site.compass.Compass.desktop /app/share/applications/site.compass.Compass.desktop
       - install -Dm644 flatpak/site.compass.Compass.metainfo.xml /app/share/metainfo/site.compass.Compass.metainfo.xml
