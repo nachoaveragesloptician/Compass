@@ -45,7 +45,7 @@ jobs:
           org.freedesktop.Sdk.Extension.node22//25.08
       - name: Validate metadata
         run: |
-          flatpak/update-flatpak.sh --check
+          bash flatpak/update-flatpak.sh --check
           desktop-file-validate flatpak/site.compass.Compass.desktop
           appstreamcli validate --no-net flatpak/site.compass.Compass.metainfo.xml
           flatpak-builder --show-manifest flatpak/site.compass.Compass.yml >/dev/null
