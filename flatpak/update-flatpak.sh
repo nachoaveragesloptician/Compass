@@ -8,6 +8,7 @@ version="$(node -p "require('./package.json').version")"
 tauri_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
 package_manager="$(node -p "require('./package.json').packageManager")"
 pnpm_version="${package_manager#pnpm@}"
+pnpm_url="https://github.com/pnpm/pnpm/releases/download/v${pnpm_version}/pnpm-linux-x64.tar.gz"
 metadata="flatpak/site.compass.Compass.metainfo.xml"
 manifest="flatpak/site.compass.Compass.yml"
 
@@ -16,7 +17,7 @@ if [[ "$version" != "$tauri_version" ]]; then
   exit 1
 fi
 
-if [[ "$package_manager" != pnpm@11.* || ! "$pnpm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ "$package_manager" != pnpm@12.* || ! "$pnpm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "unsupported packageManager $package_manager; review the pnpm source and store version" >&2
   exit 1
 fi
@@ -26,7 +27,7 @@ if [[ "${1:-}" == "--check" ]]; then
     echo "AppStream metadata does not contain release $version; run flatpak/update-flatpak.sh" >&2
     exit 1
   }
-  grep -Fq "https://registry.npmjs.org/pnpm/-/pnpm-$pnpm_version.tgz" "$manifest" || {
+  grep -Fq "$pnpm_url" "$manifest" || {
     echo "Flatpak manifest does not pin $package_manager; run flatpak/update-flatpak.sh" >&2
     exit 1
   }
@@ -61,7 +62,7 @@ venv="$work/venv"
 tools_commit="737c0085912f9f7dabf9341d4608e2a77a51a73a"
 node_output="$work/node-sources.json.tmp"
 cargo_output="$work/cargo-sources.json.tmp"
-pnpm_archive="$work/pnpm-$pnpm_version.tgz"
+pnpm_archive="$work/pnpm-linux-x64-${pnpm_version}.tar.gz"
 trap 'rm -f "$node_output" "$cargo_output" "$pnpm_archive"' EXIT
 
 if [[ ! -d "$tools_dir/.git" ]]; then
@@ -76,7 +77,7 @@ if [[ ! -x "$venv/bin/flatpak-node-generator" ]]; then
   "$venv/bin/pip" install "$tools_dir/node" aiohttp PyYAML tomlkit
 fi
 
-curl -fsSL "https://registry.npmjs.org/pnpm/-/pnpm-$pnpm_version.tgz" -o "$pnpm_archive"
+curl -fsSL "$pnpm_url" -o "$pnpm_archive"
 pnpm_sha256="$(sha256sum "$pnpm_archive" | cut -d' ' -f1)"
 
 "$venv/bin/flatpak-node-generator" pnpm pnpm-lock.yaml \
@@ -91,8 +92,6 @@ path = sys.argv[1]
 with open(path, encoding="utf-8") as source:
     entries = json.load(source)
 
-# Package downloads are generated concurrently and therefore arrive in a
-# random order. Setup sources at the end are order-sensitive and stay intact.
 split = next(
     (index for index, entry in enumerate(entries) if entry["type"] not in {"archive", "file"}),
     len(entries),
@@ -110,14 +109,16 @@ PY
 
 mv "$node_output" flatpak/node-sources.json
 mv "$cargo_output" flatpak/cargo-sources.json
-vp fmt flatpak/node-sources.json
+if command -v vp >/dev/null 2>&1; then
+  vp fmt flatpak/node-sources.json
+fi
 
-python3 - "$metadata" "$manifest" "$version" "$release_date" "$pnpm_version" "$pnpm_sha256" <<'PY'
+python3 - "$metadata" "$manifest" "$version" "$release_date" "$pnpm_url" "$pnpm_sha256" <<'PY'
 import os
 import re
 import sys
 
-path, manifest, version, release_date, pnpm_version, pnpm_sha256 = sys.argv[1:]
+path, manifest, version, release_date, pnpm_url, pnpm_sha256 = sys.argv[1:]
 text = open(path, encoding="utf-8").read()
 replacement = f'<release version="{version}" date="{release_date}" />'
 updated, count = re.subn(r'<release version="[^"]+" date="[^"]+"\s*/>', replacement, text, count=1)
@@ -130,11 +131,11 @@ os.replace(temporary, path)
 
 text = open(manifest, encoding="utf-8").read()
 replacement = (
-    f"url: https://registry.npmjs.org/pnpm/-/pnpm-{pnpm_version}.tgz\n"
+    f"url: {pnpm_url}\n"
     f"        sha256: {pnpm_sha256}"
 )
 updated, count = re.subn(
-    r"url: https://registry\.npmjs\.org/pnpm/-/pnpm-[^\s/]+\.tgz\n\s+sha256: [0-9a-f]{64}",
+    r"url: https://(?:registry\.npmjs\.org/pnpm/-/pnpm-[^\s/]+\.tgz|github\.com/pnpm/pnpm/releases/download/v[^\s/]+/pnpm-linux-x64\.tar\.gz)\n\s+sha256: [0-9a-f]{64}",
     replacement,
     text,
     count=1,
