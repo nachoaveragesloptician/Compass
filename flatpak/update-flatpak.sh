@@ -59,7 +59,7 @@ fi
 work=".flatpak-work/source-generator"
 tools_dir="$work/flatpak-builder-tools"
 venv="$work/venv"
-tools_commit="737c0085912f9f7dabf9341d4608e2a77a51a73a"
+tools_ref="master"
 node_output="$work/node-sources.json.tmp"
 cargo_output="$work/cargo-sources.json.tmp"
 pnpm_archive="$work/pnpm-linux-x64-${pnpm_version}.tar.gz"
@@ -67,15 +67,15 @@ trap 'rm -f "$node_output" "$cargo_output" "$pnpm_archive"' EXIT
 
 if [[ ! -d "$tools_dir/.git" ]]; then
   mkdir -p "$work"
-  git clone https://github.com/flatpak/flatpak-builder-tools.git "$tools_dir"
+  git clone --depth 1 https://github.com/flatpak/flatpak-builder-tools.git "$tools_dir"
 fi
-git -C "$tools_dir" fetch origin "$tools_commit"
-git -C "$tools_dir" checkout --detach "$tools_commit"
+git -C "$tools_dir" fetch --depth 1 origin "$tools_ref"
+git -C "$tools_dir" checkout --detach FETCH_HEAD
 
-if [[ ! -x "$venv/bin/flatpak-node-generator" ]]; then
+if [[ ! -d "$venv" ]]; then
   python3 -m venv "$venv"
-  "$venv/bin/pip" install "$tools_dir/node" aiohttp PyYAML tomlkit
 fi
+"$venv/bin/pip" install --upgrade "$tools_dir/node" aiohttp PyYAML tomlkit
 
 curl -fsSL "$pnpm_url" -o "$pnpm_archive"
 pnpm_sha256="$(sha256sum "$pnpm_archive" | cut -d' ' -f1)"
