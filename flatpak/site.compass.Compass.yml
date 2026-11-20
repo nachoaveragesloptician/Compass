@@ -24,7 +24,9 @@ build-options:
   env:
     CARGO_HOME: /run/build/compass/cargo
     CARGO_NET_OFFLINE: 'true'
+    COMPASS_CAPSTAN_OPTIONAL: '1'
     npm_config_cache: /run/build/compass/npm-cache
+    pnpm_config_pm_on_fail: ignore
     CI: 'true'
 
 modules:
@@ -81,7 +83,7 @@ modules:
   - name: compass
     buildsystem: simple
     build-commands:
-      - node flatpak-node/pnpm-cli/bin/pnpm.cjs install --offline --frozen-lockfile --trust-lockfile
+      - chmod +x flatpak-node/pnpm-cli/pnpm && ./flatpak-node/pnpm-cli/pnpm install --offline --frozen-lockfile --trust-lockfile
       - node node_modules/@tauri-apps/cli/tauri.js build --config src-tauri/tauri.flatpak.conf.json --no-bundle
       - install -Dm755 src-tauri/target/release/compass /app/bin/compass
       - install -Dm644 flatpak/site.compass.Compass.desktop /app/share/applications/site.compass.Compass.desktop
@@ -105,6 +107,7 @@ modules:
       - type: archive
         url: https://registry.npmjs.org/pnpm/-/pnpm-11.9.0.tgz
         sha256: 2b567aa66026238078ac2e0a33bec3febd60e962987aac697456f3180819b287
+        strip-components: 0
         dest: flatpak-node/pnpm-cli
       - node-sources.json
       - cargo-sources.json
